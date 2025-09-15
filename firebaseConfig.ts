@@ -2,7 +2,7 @@
 // Importa las funciones que necesitas de los SDKs que necesitas
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-
+import { getAnalytics } from "firebase/analytics";
 // TODO: Reemplaza lo siguiente con la configuración de tu propio proyecto de Firebase
 // que obtuviste en el Paso 1.
 const firebaseConfig = {
