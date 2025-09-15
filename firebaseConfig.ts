@@ -17,6 +17,6 @@ const firebaseConfig = {
 
 // Inicializa Firebase
 const app = initializeApp(firebaseConfig);
-
+const analytics = getAnalytics(app);
 // Exporta la instancia de la base de datos de Firestore para usarla en otras partes de la app
 export const db = getFirestore(app);
