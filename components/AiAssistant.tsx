@@ -1,7 +1,6 @@
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Product } from '../types';
-import { getInventoryInsightsStream } from '../services/geminiService';
+import { getInventoryInsightsStream, isAiAvailable } from '../services/geminiService';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { SendIcon } from './icons/SendIcon';
 
@@ -48,14 +47,50 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ products }) => {
           return newMessages;
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      const errorMessage: Message = { sender: 'ai', text: 'Lo siento, ocurrió un error al contactar al asistente.' };
-      setMessages(prev => [...prev, errorMessage]);
+      const errorMessageText = error.message || 'Lo siento, ocurrió un error al contactar al asistente.';
+      setMessages(prev => {
+        const newMessages = [...prev];
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (lastMessage?.sender === 'ai') {
+          // Replace the placeholder or partial message with the error
+          newMessages[newMessages.length - 1] = { sender: 'ai', text: errorMessageText };
+        } else {
+          // If no AI message placeholder was added, add a new error message
+          newMessages.push({ sender: 'ai', text: errorMessageText });
+        }
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }
   }, [prompt, isLoading, products]);
+
+  if (!isAiAvailable) {
+    return (
+      <div className="mt-8 bg-white dark:bg-slate-800 shadow-lg rounded-xl ring-1 ring-slate-900/5">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <SparklesIcon className="w-6 h-6 text-slate-400" />
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">Asistente de IA</h2>
+          </div>
+          <div className="h-64 flex flex-col items-center justify-center text-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+              <h3 className="font-semibold text-slate-600 dark:text-slate-300">Asistente no disponible</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                La clave de API para el asistente de IA no está configurada.
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                Por favor, configura la variable de entorno `API_KEY` en la configuración de tu proyecto en Vercel para habilitar esta función.
+              </p>
+          </div>
+           <div className="mt-4 text-center text-xs text-slate-400">
+             La aplicación principal de gestión de inventario seguirá funcionando normalmente.
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-8 bg-white dark:bg-slate-800 shadow-lg rounded-xl ring-1 ring-slate-900/5">
