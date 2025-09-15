@@ -1,8 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import { db } from '../firebaseConfig';
-import { collection, onSnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+// FIX: Removed v9 modular imports from 'firebase/firestore' as they are incompatible with v8.
 import { addProductToFirestore, updateProductInFirestore, deleteProductFromFirestore } from '../services/firestoreService';
 
 
@@ -11,11 +10,13 @@ export const useInventory = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const productsCollectionRef = collection(db, 'products');
+    // FIX: Switched to Firebase v8 syntax for collection reference.
+    const productsCollectionRef = db.collection('products');
     
     // onSnapshot crea un listener en tiempo real
-    const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
-      const productsData = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+    // FIX: Switched to Firebase v8 onSnapshot syntax.
+    const unsubscribe = productsCollectionRef.onSnapshot((snapshot) => {
+      const productsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       } as Product));
