@@ -1,28 +1,31 @@
-
 import { db } from '../firebaseConfig';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+// FIX: Removed unused v9 modular imports from 'firebase/firestore'.
 import { Product } from '../types';
 
-const productsCollectionRef = collection(db, 'products');
+// FIX: Switched to Firebase v8 syntax.
+const productsCollectionRef = db.collection('products');
 
 export const addProductToFirestore = async (productData: Omit<Product, 'id' | 'lastUpdated'>) => {
   const newProductData = {
     ...productData,
     lastUpdated: new Date().toISOString(), // Mantenemos el formato ISO para consistencia
   };
-  await addDoc(productsCollectionRef, newProductData);
+  // FIX: Switched to Firebase v8 syntax.
+  await productsCollectionRef.add(newProductData);
 };
 
 export const updateProductInFirestore = async (id: string, updatedData: Omit<Product, 'id' | 'lastUpdated'>) => {
-  const productDoc = doc(db, 'products', id);
+  // FIX: Switched to Firebase v8 syntax.
+  const productDoc = productsCollectionRef.doc(id);
   const newProductData = {
     ...updatedData,
     lastUpdated: new Date().toISOString(),
   };
-  await updateDoc(productDoc, newProductData);
+  await productDoc.update(newProductData);
 };
 
 export const deleteProductFromFirestore = async (id: string) => {
-  const productDoc = doc(db, 'products', id);
-  await deleteDoc(productDoc);
+  // FIX: Switched to Firebase v8 syntax.
+  const productDoc = productsCollectionRef.doc(id);
+  await productDoc.delete();
 };
