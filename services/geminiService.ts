@@ -1,15 +1,17 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Product } from "../types";
 
-const API_KEY = process.env.API_KEY;
+// Fix: Per coding guidelines, the API key must be obtained exclusively from `process.env.API_KEY`.
+// This change also resolves the TypeScript error "Property 'env' does not exist on type 'ImportMeta'".
+const apiKey = process.env.API_KEY;
 
-if (!API_KEY) {
-  // A more user-friendly error could be shown in the UI
-  console.error("API_KEY is not defined. Please check your environment variables.");
+// Esta validación detiene la app si la clave no se encuentra, mostrando un error claro en la consola
+// en lugar de una pantalla en blanco.
+if (!apiKey) {
+  throw new Error("La variable de entorno API_KEY no está definida. Por favor, configúrala en los ajustes de despliegue.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+const ai = new GoogleGenAI({ apiKey });
 
 export const getInventoryInsightsStream = async (prompt: string, inventory: Product[]) => {
   const model = "gemini-2.5-flash";
