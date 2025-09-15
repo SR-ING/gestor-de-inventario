@@ -1,80 +1,59 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
+import { db } from '../firebaseConfig';
+import { collection, onSnapshot, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { addProductToFirestore, updateProductInFirestore, deleteProductFromFirestore } from '../services/firestoreService';
 
-const INVENTORY_STORAGE_KEY = 'inventoryApp.products';
-const INVENTORY_CHANNEL_NAME = 'inventory-sync';
 
 export const useInventory = () => {
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const storedProducts = localStorage.getItem(INVENTORY_STORAGE_KEY);
-      return storedProducts ? JSON.parse(storedProducts) : [];
-    } catch (error) {
-      console.error('Error reading from localStorage', error);
-      return [];
-    }
-  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Effect to handle synchronization between tabs
   useEffect(() => {
-    const channel = new BroadcastChannel(INVENTORY_CHANNEL_NAME);
+    const productsCollectionRef = collection(db, 'products');
+    
+    // onSnapshot crea un listener en tiempo real
+    const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
+      const productsData = snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Product));
+      setProducts(productsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error al obtener los productos de Firestore:", error);
+      setLoading(false);
+    });
 
-    const handleMessage = () => {
-      console.log('Inventory update received from another tab.');
-      try {
-        const storedProducts = localStorage.getItem(INVENTORY_STORAGE_KEY);
-        setProducts(storedProducts ? JSON.parse(storedProducts) : []);
-      } catch (error) {
-        console.error('Error syncing inventory from localStorage', error);
-      }
-    };
-
-    channel.addEventListener('message', handleMessage);
-
-    // Cleanup on component unmount
-    return () => {
-      channel.removeEventListener('message', handleMessage);
-      channel.close();
-    };
+    // Limpiar el listener cuando el componente se desmonte
+    return () => unsubscribe();
   }, []);
 
-  // Effect to persist changes to localStorage and notify other tabs
-  useEffect(() => {
+  const addProduct = useCallback(async (productData: Omit<Product, 'id' | 'lastUpdated'>) => {
     try {
-      const serializedProducts = JSON.stringify(products);
-      localStorage.setItem(INVENTORY_STORAGE_KEY, serializedProducts);
-      
-      // Notify other tabs about the change
-      const channel = new BroadcastChannel(INVENTORY_CHANNEL_NAME);
-      channel.postMessage({ type: 'update' });
-      channel.close();
-
+      await addProductToFirestore(productData);
     } catch (error) {
-      console.error('Error writing to localStorage', error);
+      console.error("Error al añadir el producto:", error);
+      // Opcional: manejar el error en la UI
     }
-  }, [products]);
-
-  const addProduct = useCallback((productData: Omit<Product, 'id' | 'lastUpdated'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: crypto.randomUUID(),
-      lastUpdated: new Date().toISOString(),
-    };
-    setProducts(prevProducts => [...prevProducts, newProduct]);
   }, []);
 
-  const updateProduct = useCallback((id: string, updatedData: Omit<Product, 'id' | 'lastUpdated'>) => {
-    setProducts(prevProducts =>
-      prevProducts.map(p =>
-        p.id === id ? { ...p, ...updatedData, lastUpdated: new Date().toISOString() } : p
-      )
-    );
+  const updateProduct = useCallback(async (id: string, updatedData: Omit<Product, 'id' | 'lastUpdated'>) => {
+    try {
+      await updateProductInFirestore(id, updatedData);
+    } catch (error) {
+      console.error("Error al actualizar el producto:", error);
+    }
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
-    setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
+  const deleteProduct = useCallback(async (id: string) => {
+    try {
+      await deleteProductFromFirestore(id);
+    } catch (error) {
+      console.error("Error al eliminar el producto:", error);
+    }
   }, []);
 
-  return { products, addProduct, updateProduct, deleteProduct };
+  return { products, addProduct, updateProduct, deleteProduct, loading };
 };
